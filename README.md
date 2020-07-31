@@ -135,3 +135,14 @@ The preprint can be found [here](https://arxiv.org/abs/1910.01122).
 - Mapillary AB. 2019. OpenSfM. https://github.com/mapillary/OpenSfM.
 - Giorgio Grisetti, Rainer Kümmerle, Cyrill Stachniss, and Wolfram Burgard. 2010. A Tutorial on Graph-Based SLAM. IEEE Transactions on Intelligent Transportation SystemsMagazine 2, 4 (2010), 31–43.
 - Rainer Kümmerle, Giorgio Grisetti, Hauke Strasdat, Kurt Konolige, and Wolfram Burgard. 2011. g2o: A general framework for graph optimization. In Proceedings of IEEE International Conference on Robotics and Automation (ICRA). 3607–3613.
+
+
+## Darin - Getting node to work
+Create /openvslam/vocab directory
+Copy vocab from https://drive.google.com/open?id=1wUPb328th8bUqhOk-i8xllt5mgRW4n84
+Copy numurus.yaml to directory
+export ROS_MASTER_URI=http://192.168.10.110:11311
+export ROS_IP=192.168.100.65
+source /openvslam/ros/devel/setup.bash
+rosrun image_transport republish raw in:=/numurus/3dsc/100001/3dx_device/stereo_camera/img_0/image_raw raw out:=/camera/image_raw &
+rosrun openvslam run_slam -v /vocab/orb_vocab.dbow2 -c /vocab/numurus.yaml --map-db /vocab/map.msg

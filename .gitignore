@@ -1,6 +1,7 @@
 build/
 devel/
 lib/
+vocab/
 .idea/
 cmake-build-debug/
 cmake-build-release/
@@ -39,3 +40,4 @@ cmake-build-release/
 *.exe
 *.out
 *.app
+.vscode/c_cpp_properties.json

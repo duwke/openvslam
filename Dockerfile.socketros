@@ -1,0 +1,297 @@
+FROM ubuntu:18.04
+ENV DEBIAN_FRONTEND noninteractive
+
+# install dependencies via apt
+ENV DEBCONF_NOWARNINGS yes
+RUN set -x && \
+  apt-get update -y -qq && \
+  apt-get upgrade -y -qq --no-install-recommends && \
+  : "basic dependencies" && \
+  apt-get install -y -qq \
+    build-essential \
+    pkg-config \
+    cmake \
+    git \
+    wget \
+    curl \
+    tar \
+    unzip && \
+  : "g2o dependencies" && \
+  apt-get install -y -qq \
+    libgoogle-glog-dev \
+    libatlas-base-dev \
+    libsuitesparse-dev \
+    libglew-dev && \
+  : "OpenCV dependencies" && \
+  apt-get install -y -qq \
+    libjpeg-dev \
+    libpng++-dev \
+    libtiff-dev \
+    libopenexr-dev \
+    libwebp-dev \
+    ffmpeg \
+    libavcodec-dev \
+    libavformat-dev \
+    libavutil-dev \
+    libswscale-dev \
+    libavresample-dev && \
+  : "other dependencies" && \
+  apt-get install -y -qq \
+    libyaml-cpp-dev && \
+  : "remove cache" && \
+  apt-get autoremove -y -qq && \
+  rm -rf /var/lib/apt/lists/*
+
+ARG CMAKE_INSTALL_PREFIX=/usr/local
+ARG NUM_THREADS=1
+
+ENV CPATH=${CMAKE_INSTALL_PREFIX}/include:${CPATH}
+ENV C_INCLUDE_PATH=${CMAKE_INSTALL_PREFIX}/include:${C_INCLUDE_PATH}
+ENV CPLUS_INCLUDE_PATH=${CMAKE_INSTALL_PREFIX}/include:${CPLUS_INCLUDE_PATH}
+ENV LIBRARY_PATH=${CMAKE_INSTALL_PREFIX}/lib:${LIBRARY_PATH}
+ENV LD_LIBRARY_PATH=${CMAKE_INSTALL_PREFIX}/lib:${LD_LIBRARY_PATH}
+
+# Eigen
+ARG EIGEN3_VERSION=3.3.7
+WORKDIR /tmp
+RUN set -x && \
+  wget -q http://bitbucket.org/eigen/eigen/get/${EIGEN3_VERSION}.tar.bz2 && \
+  tar xf ${EIGEN3_VERSION}.tar.bz2 && \
+  rm -rf ${EIGEN3_VERSION}.tar.bz2 && \
+  mv eigen-eigen-* eigen-${EIGEN3_VERSION} && \
+  cd eigen-${EIGEN3_VERSION} && \
+  mkdir -p build && \
+  cd build && \
+  cmake \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX} \
+    .. && \
+  make -j${NUM_THREADS} && \
+  make install && \
+  cd /tmp && \
+  rm -rf *
+ENV Eigen3_DIR=${CMAKE_INSTALL_PREFIX}/share/eigen3/cmake
+
+# g2o
+ARG G2O_COMMIT=9b41a4ea5ade8e1250b9c1b279f3a9c098811b5a
+WORKDIR /tmp
+RUN set -x && \
+  git clone https://github.com/RainerKuemmerle/g2o.git && \
+  cd g2o && \
+  git checkout ${G2O_COMMIT} && \
+  mkdir -p build && \
+  cd build && \
+  cmake \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX} \
+    -DBUILD_SHARED_LIBS=ON \
+    -DBUILD_UNITTESTS=OFF \
+    -DBUILD_WITH_MARCH_NATIVE=ON \
+    -DG2O_USE_CHOLMOD=OFF \
+    -DG2O_USE_CSPARSE=ON \
+    -DG2O_USE_OPENGL=OFF \
+    -DG2O_USE_OPENMP=ON \
+    -DG2O_BUILD_APPS=OFF \
+    -DG2O_BUILD_EXAMPLES=OFF \
+    -DG2O_BUILD_LINKED_APPS=OFF \
+    .. && \
+  make -j${NUM_THREADS} && \
+  make install && \
+  cd /tmp && \
+  rm -rf *
+ENV g2o_DIR=${CMAKE_INSTALL_PREFIX}/lib/cmake/g2o
+
+# OpenCV
+ARG OPENCV_VERSION=3.4.0
+WORKDIR /tmp
+RUN set -x && \
+  wget -q https://github.com/opencv/opencv/archive/${OPENCV_VERSION}.zip && \
+  unzip -q ${OPENCV_VERSION}.zip && \
+  rm -rf ${OPENCV_VERSION}.zip && \
+  cd opencv-${OPENCV_VERSION} && \
+  mkdir -p build && \
+  cd build && \
+  cmake \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX} \
+    -DBUILD_DOCS=OFF \
+    -DBUILD_EXAMPLES=OFF \
+    -DBUILD_JASPER=OFF \
+    -DBUILD_OPENEXR=OFF \
+    -DBUILD_PERF_TESTS=OFF \
+    -DBUILD_TESTS=OFF \
+    -DBUILD_opencv_apps=OFF \
+    -DBUILD_opencv_dnn=OFF \
+    -DBUILD_opencv_ml=OFF \
+    -DBUILD_opencv_python_bindings_generator=OFF \
+    -DENABLE_CXX11=ON \
+    -DENABLE_FAST_MATH=ON \
+    -DWITH_EIGEN=ON \
+    -DWITH_FFMPEG=ON \
+    -DWITH_OPENMP=ON \
+    .. && \
+  make -j${NUM_THREADS} && \
+  make install && \
+  cd /tmp && \
+  rm -rf *
+ENV OpenCV_DIR=${CMAKE_INSTALL_PREFIX}/lib/cmake/opencv4
+
+# DBoW2
+ARG DBOW2_COMMIT=687fcb74dd13717c46add667e3fbfa9828a7019f
+WORKDIR /tmp
+RUN set -x && \
+  git clone https://github.com/shinsumicco/DBoW2.git && \
+  cd DBoW2 && \
+  git checkout ${DBOW2_COMMIT} && \
+  mkdir -p build && \
+  cd build && \
+  cmake \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX} \
+    .. && \
+  make -j${NUM_THREADS} && \
+  make install && \
+  cd /tmp && \
+  rm -rf *
+ENV DBoW2_DIR=${CMAKE_INSTALL_PREFIX}/lib/cmake/DBoW2
+
+# socket.io-client-cpp
+ARG SIOCLIENT_COMMIT=ff6ef08e45c594e33aa6bc19ebdd07954914efe0
+WORKDIR /tmp
+RUN set -x && \
+  git clone https://github.com/shinsumicco/socket.io-client-cpp.git && \
+  cd socket.io-client-cpp && \
+  git checkout ${SIOCLIENT_COMMIT} && \
+  git submodule init && \
+  git submodule update && \
+  mkdir -p build && \
+  cd build && \
+  cmake \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX} \
+    -DBUILD_UNIT_TESTS=OFF \
+    .. && \
+  make -j${NUM_THREADS} && \
+  make install && \
+  cd /tmp && \
+  rm -rf *
+ENV sioclient_DIR=${CMAKE_INSTALL_PREFIX}/lib/cmake/sioclient
+
+# protobuf
+WORKDIR /tmp
+RUN set -x && \
+  apt-get update -y -qq && \
+  apt-get upgrade -y -qq --no-install-recommends && \
+  apt-get install -y -qq autogen autoconf libtool && \
+  wget -q https://github.com/google/protobuf/archive/v3.6.1.tar.gz && \
+  tar xf v3.6.1.tar.gz && \
+  cd protobuf-3.6.1 && \
+  ./autogen.sh && \
+  ./configure --prefix=${CMAKE_INSTALL_PREFIX} --enable-static=no && \
+  make -j${NUM_THREADS} && \
+  make install && \
+  cd /tmp && \
+  rm -rf * && \
+  apt-get purge -y -qq autogen autoconf libtool && \
+  apt-get autoremove -y -qq && \
+  rm -rf /var/lib/apt/lists/*
+
+# OpenVSLAM
+COPY . /openvslam/
+WORKDIR /openvslam/
+RUN set -x && \
+  mkdir -p build && \
+  cd build && \
+  cmake \
+    -DBUILD_WITH_MARCH_NATIVE=ON \
+    -DUSE_PANGOLIN_VIEWER=OFF \
+    -DUSE_SOCKET_PUBLISHER=ON \
+    -DUSE_STACK_TRACE_LOGGER=ON \
+    -DBOW_FRAMEWORK=DBoW2 \
+    -DBUILD_TESTS=OFF \
+    .. && \
+  make -j${NUM_THREADS} && \
+  rm -rf CMakeCache.txt CMakeFiles Makefile cmake_install.cmake example src && \
+  chmod -R 777 ./*
+
+# Needed by ROS
+ENV LANG C.UTF-8
+ENV LC_ALL C.UTF-8
+ENV ROS_DISTRO melodic
+ENV DEBIAN_FRONTEND noninteractive
+SHELL ["/bin/bash", "-c"]
+# For HMI's Artifactory repos
+RUN apt-get update && \
+    apt-get install -q -y \
+        apt-transport-https \
+        curl \
+        gnupg2 \
+        python \
+        python3 \
+        python3-distutils \
+        && \
+    curl "https://bootstrap.pypa.io/get-pip.py" -o "get-pip.py" && \
+    /usr/bin/python2 get-pip.py && \
+    /usr/local/bin/pip2 install --no-cache-dir --upgrade --force-reinstall \
+        setuptools \
+        enum34 \
+        pip \
+        rosdep \
+        rosinstall \
+        vcstool \
+        catkin_tools \
+        trollius \
+        && \
+    rm -rf ~/.cache/pip && \
+    /usr/bin/python3 get-pip.py && \
+    /usr/local/bin/pip3 install --no-cache-dir --upgrade --force-reinstall \
+        setuptools \
+        && \
+    rm get-pip.py && \
+    rm -rf ~/.cache/pip && \
+    # Gazebo (I hate that we get the key over regular HTTP)
+    curl -sSL http://packages.osrfoundation.org/gazebo.key | apt-key add --yes - && \
+    echo "deb http://packages.osrfoundation.org/gazebo/ubuntu-stable/ bionic main" > /etc/apt/sources.list.d/2-gazebo-stable.list && \
+    # HMI's ROS repository mirror, with official as fallback
+    apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C1CF6E31E6BADE8868B172B4F42ED6FBAB17C654 && \
+    echo "deb http://packages.ros.org/ros/ubuntu bionic main" > /etc/apt/sources.list.d/2-ros1-latest.list && \
+    # NodeJS (for vue web apps)
+    curl -sSL https://deb.nodesource.com/gpgkey/nodesource.gpg.key | apt-key add - && \
+    echo "deb https://deb.nodesource.com/node_10.x bionic main" | tee /etc/apt/sources.list.d/nodesource.list && \
+    echo "deb-src https://deb.nodesource.com/node_10.x bionic main" | tee -a /etc/apt/sources.list.d/nodesource.list && \
+    # Update and upgrade
+    apt-get update && \
+    apt-get upgrade -y && \
+    apt-get install -y \
+        dirmngr \
+        gnupg2 \
+        python-dev \
+        python3-dev \
+        ros-melodic-ros-core \
+        && \
+    rm -rf /var/lib/apt/lists/*
+
+
+# https://openvslam.readthedocs.io/en/master/ros_package.html instructions
+RUN  curl -sSL https://deb.nodesource.com/gpgkey/nodesource.gpg.key | apt-key add - && \
+    echo "deb https://deb.nodesource.com/node_10.x bionic main" | tee /etc/apt/sources.list.d/nodesource.list && \
+    echo "deb-src https://deb.nodesource.com/node_10.x bionic main" | tee -a /etc/apt/sources.list.d/nodesource.list && \
+  apt-get update && \
+  apt-get install -y ros-melodic-image-transport vim nodejs && \
+  cd /openvslam/ros && \
+  git clone --branch ${ROS_DISTRO} --depth 1 https://github.com/ros-perception/vision_opencv.git && \
+  cp -r vision_opencv/cv_bridge src/ && \
+  rm -rf vision_opencv
+
+RUN source /opt/ros/melodic/setup.bash && \ 
+  cd /openvslam/ros && \
+  /opt/ros/melodic/bin/catkin_make \
+    -DBUILD_WITH_MARCH_NATIVE=ON \
+    -DUSE_PANGOLIN_VIEWER=OFF \
+    -DUSE_SOCKET_PUBLISHER=ON \
+    -DUSE_STACK_TRACE_LOGGER=ON \
+    -DBOW_FRAMEWORK=DBoW2
+
+
+WORKDIR /openvslam/build/
+ENTRYPOINT ["/bin/bash"]
