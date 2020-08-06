@@ -140,9 +140,11 @@ The preprint can be found [here](https://arxiv.org/abs/1910.01122).
 ## Darin - Getting node to work
 Create /openvslam/vocab directory
 Copy vocab from https://drive.google.com/open?id=1wUPb328th8bUqhOk-i8xllt5mgRW4n84
-Copy numurus.yaml to directory
+Copy blackfly.yaml to directory
+docker-compose run openvslam
 export ROS_MASTER_URI=http://192.168.10.110:11311
 export ROS_IP=192.168.100.65
 source /openvslam/ros/devel/setup.bash
-rosrun image_transport republish raw in:=/numurus/3dsc/100001/3dx_device/stereo_camera/img_0/image_raw raw out:=/camera/image_raw &
-rosrun openvslam run_slam -v /vocab/orb_vocab.dbow2 -c /vocab/numurus.yaml --map-db /vocab/map.msg
+node /openvslam/viewer/app.js &
+rosrun image_transport republish raw in:=/head/left/out raw out:=/camera/image_raw &
+rosrun openvslam run_slam -v /vocab/orb_vocab.dbow2 -c /vocab/blackfly.yaml --map-db /vocab/map.msg
