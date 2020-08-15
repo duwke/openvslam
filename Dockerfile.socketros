@@ -209,10 +209,9 @@ RUN set -x && \
     -DUSE_STACK_TRACE_LOGGER=ON \
     -DBOW_FRAMEWORK=DBoW2 \
     -DBUILD_TESTS=OFF \
+    -DCMAKE_BUILD_TYPE=Debug \
     .. && \
-  make -j${NUM_THREADS} && \
-  rm -rf CMakeCache.txt CMakeFiles Makefile cmake_install.cmake example src && \
-  chmod -R 777 ./*
+  make -j${NUM_THREADS} 
 
 # Needed by ROS
 ENV LANG C.UTF-8
@@ -277,7 +276,7 @@ RUN  curl -sSL https://deb.nodesource.com/gpgkey/nodesource.gpg.key | apt-key ad
     echo "deb https://deb.nodesource.com/node_10.x bionic main" | tee /etc/apt/sources.list.d/nodesource.list && \
     echo "deb-src https://deb.nodesource.com/node_10.x bionic main" | tee -a /etc/apt/sources.list.d/nodesource.list && \
   apt-get update && \
-  apt-get install -y ros-melodic-image-transport vim nodejs && \
+  apt-get install -y ros-melodic-image-transport vim nodejs gdb && \
   cd /openvslam/ros && \
   git clone --branch ${ROS_DISTRO} --depth 1 https://github.com/ros-perception/vision_opencv.git && \
   cp -r vision_opencv/cv_bridge src/ && \
@@ -290,7 +289,8 @@ RUN source /opt/ros/melodic/setup.bash && \
     -DUSE_PANGOLIN_VIEWER=OFF \
     -DUSE_SOCKET_PUBLISHER=ON \
     -DUSE_STACK_TRACE_LOGGER=ON \
-    -DBOW_FRAMEWORK=DBoW2
+    -DBOW_FRAMEWORK=DBoW2 \
+    -DCMAKE_BUILD_TYPE=Debug 
 
 
 WORKDIR /openvslam/build/

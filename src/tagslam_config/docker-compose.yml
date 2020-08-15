@@ -1,0 +1,12 @@
+version: '2'
+services:
+  tagslam_dk:
+    image: tagslam_dk:latest
+    network_mode: "host"
+    privileged: true
+    ports:
+      - "3000:3000"
+      - "3001:3001"
+    volumes:
+      - /home/dkeever/workspace/openvslam/src/tagslam_config:/tagslam_config
+      - /home/dkeever/bags:/bags

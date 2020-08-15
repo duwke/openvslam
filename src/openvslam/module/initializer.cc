@@ -140,6 +140,7 @@ bool initializer::try_initialize_for_monocular(data::frame& curr_frm) {
     match::area matcher(0.9, true);
     const auto num_matches = matcher.match_in_consistent_area(init_frm_, curr_frm, prev_matched_coords_, init_matches_, 100);
 
+    spdlog::debug("num matches: {}", num_matches);
     if (num_matches < min_num_triangulated_) {
         // rebuild the initializer with the next frame
         reset();

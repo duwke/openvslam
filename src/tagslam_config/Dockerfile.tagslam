@@ -1,0 +1,53 @@
+FROM docker.hmech.us:5000/ci/bionic-melodic
+ENV DEBIAN_FRONTEND noninteractive
+
+# install dependencies via apt
+ENV DEBCONF_NOWARNINGS yes
+RUN set -x && \
+  apt-get update -y -qq && \
+  apt-get upgrade -y -qq --no-install-recommends && \
+  : "basic dependencies" && \
+  apt-get install -y -qq \
+    build-essential \
+    pkg-config \
+    cmake \
+    git \
+    wget \
+    curl \
+    tar \
+    unzip \
+    python-catkin-tools \
+    software-properties-common \
+    vim \
+    gdb && \
+  : "remove cache" && \
+  apt-get autoremove -y -qq && \
+  rm -rf /var/lib/apt/lists/*
+
+RUN apt-add-repository ppa:bernd-pfrommer/libgtsam && \
+  apt-get update && \
+  apt-get install -y -qq libgtsam-unstable4 libgtsam4 libgtsam-dev libgtsam-unstable-dev && \  
+  : "remove cache" && \
+  apt-get autoremove -y -qq && \
+  rm -rf /var/lib/apt/lists/*
+
+RUN git clone --recursive https://github.com/berndpfrommer/tagslam_root.git
+
+WORKDIR /tagslam_root/
+
+ENV ROS_DISTRO melodic
+SHELL ["/bin/bash", "-c"]
+RUN  source /opt/ros/$ROS_DISTRO/setup.bash && \
+  catkin config -DCMAKE_BUILD_TYPE=Debug && \
+  apt-get update && \
+  rosdep update && \
+  rosdep install --from-paths src --ignore-src -r -y 
+
+WORKDIR /tagslam_root/src/
+
+RUN source /opt/ros/$ROS_DISTRO/setup.bash && \
+  catkin build && \
+  source /tag_slam/devel/setup.bash
+
+WORKDIR /
+ENTRYPOINT ["/bin/bash"]
